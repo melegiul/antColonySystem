@@ -12,7 +12,7 @@ import java.util.TreeSet;
 public class Main {
 
     /**
-     * approach, which searches a solution for the traveling salesman
+     * approach, which searches a solution for the traveling salesman problem
      * by trying all possible routes
      */
     private static void exhaustive() {
@@ -46,8 +46,8 @@ public class Main {
     public static void main(String[] args) {
 //        exhaustive();
         if (args.length != 9) {
-            System.out.println("error: Invalid Arguments");
-            return;
+            // overwrite invalid arguments
+            args = new String[]{"20", "1", "200", "10", "0.9", "2.0", "0.1", "0.1", "0.001"};
         }
         int numberCities = Integer.parseInt(args[0]);
         int seed = Integer.parseInt(args[1]);
