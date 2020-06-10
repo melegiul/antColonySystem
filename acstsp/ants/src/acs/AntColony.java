@@ -98,9 +98,6 @@ public class AntColony<T extends Comparable<T>> implements Comparator<T[]>{
                 this.routeWriter.flush();
                 this.pheromoneWriter.flush();
                 if (i>=1) {
-//                    this.positionWriter.flush();
-//                    this.routeWriter.flush();
-//                    this.pheromoneWriter.flush();
                     computeEmergence(i, new String[]{"position", "route", "pheromone"});
                 } else {
                     initialEmergence(new String[]{"position", "route", "pheromone"});
@@ -137,8 +134,8 @@ public class AntColony<T extends Comparable<T>> implements Comparator<T[]>{
     }
 
     /**
-     * normalize all tours
-     * @param normCity
+     * normalize all tours, i.e. choose a common start city for each tour
+     * @param normCity start city
      */
     private void rotateTour(Integer normCity) {
         for(int k=0; k<numberAnts; k++){
@@ -160,7 +157,9 @@ public class AntColony<T extends Comparable<T>> implements Comparator<T[]>{
     }
 
     /**
-     * two routes are only equal if there is no difference in the track
+     * two routes are only equal if there is no difference in the trace
+     * so even when in later iterations only few city along the traces differ
+     * they considered to be different and hence lack of a decrease of entropy
      */
     private void computeRouteEntropy(){
         TreeSet<Integer[]> routeSet = new TreeSet<Integer[]>(new Comparator<Integer[]>() {
@@ -211,7 +210,7 @@ public class AntColony<T extends Comparable<T>> implements Comparator<T[]>{
     }
 
     /**
-     *
+     * groups pheromone entries in specific number of areas
      * @param granularity for quantification, here space is divided in four equal sized parts
      */
     private void computePheromoneEntropy(int granularity) {
@@ -287,6 +286,10 @@ public class AntColony<T extends Comparable<T>> implements Comparator<T[]>{
         }
     }
 
+    /**
+     * initial emergence can is set equal to initial entropy
+     * @param attributeList the investigated attributes
+     */
     private void initialEmergence(String[] attributeList){
         for(int i=0; i<attributeList.length; i++) {
             String attribute = attributeList[i];
@@ -295,7 +298,6 @@ public class AntColony<T extends Comparable<T>> implements Comparator<T[]>{
             try (Stream<String> lines = Files.lines(Paths.get(path))) {
                 Optional<String> initialEntropy = lines.findFirst();
                 Double value = Double.valueOf(initialEntropy.get());
-//                value = 0.0;
                 // a list for each attribute
                 switch (attribute){
                     case "position":
@@ -357,10 +359,10 @@ public class AntColony<T extends Comparable<T>> implements Comparator<T[]>{
                     default:
                         throw new IOException();
                 }
-                if ((iteration+1)%10==0) {
+                /*if ((iteration+1)%10==0) {
                     String output = String.format("%s-Emergence: ", attribute);
                     System.out.println(output + emergence);
-                }
+                }*/
             } catch (IOException e) {
                 System.out.println("Error while emergence computation");
             }
@@ -368,7 +370,7 @@ public class AntColony<T extends Comparable<T>> implements Comparator<T[]>{
     }
 
     /**
-     *
+     * final computation of expectation value for each different acsSeed
      * @param bestDistance list with possible duplicates, number of
      *                     occurrences yield the probability of distinct element
      * @param distanceSet representation of the list as a set
@@ -422,7 +424,8 @@ public class AntColony<T extends Comparable<T>> implements Comparator<T[]>{
     }
 
     /**
-     * set initial pheromone
+     * set initial pheromone according to ACS-Paper
+     * initialize writers for log files
      */
     private void acsInit() {
         try{
@@ -457,7 +460,7 @@ public class AntColony<T extends Comparable<T>> implements Comparator<T[]>{
     }
 
     /**
-     * resets the list of tour to start and the list of unvisited
+     * resets the list of tour to the start point and the list of unvisited
      * to all other cities
      * @param iter for random selection of start (depending on iteration)
      */
@@ -505,7 +508,7 @@ public class AntColony<T extends Comparable<T>> implements Comparator<T[]>{
     }
 
     /**
-     * local updating rule using (5)
+     * local updating rule according to formula (5)
      */
     private void localUpdate() {
         for (int k=0; k<numberAnts; k++) {
@@ -685,15 +688,6 @@ public class AntColony<T extends Comparable<T>> implements Comparator<T[]>{
                 case "pheromone":
                     path = System.getProperty("user.dir") + "/logs/emergence/pheromone.csv";
                     break;
-//                case "position-absolute":
-//                    path = System.getProperty("user.dir") + "/logs/absolute/position.csv";
-//                    break;
-//                case "route-absolute":
-//                    path = System.getProperty("user.dir") + "/logs/absolute/route.csv";
-//                    break;
-//                case "pheromone-absolute":
-//                    path = System.getProperty("user.dir") + "/logs/absolute/pheromone.csv";
-//                    break;
                 default:
                     throw new IOException();
             }
@@ -701,7 +695,6 @@ public class AntColony<T extends Comparable<T>> implements Comparator<T[]>{
             File file = new File(path);
             FileWriter writer = new FileWriter(file);
             int i=1;
-//            CSVWriter csvWriter =
             writer.write("iteration" + "," + "value" + "\n");
             for(Double d: averageValue){
                 writer.write(String.valueOf(i++) + "," + String.valueOf(d) + "\n");
@@ -712,6 +705,12 @@ public class AntColony<T extends Comparable<T>> implements Comparator<T[]>{
         }
     }
 
+    /**
+     * write the finial emergence for each attribute
+     * @param position for investigation of position entropy
+     * @param route for investigation of route entropy
+     * @param pheromone for investigation of pheromone entropy
+     */
     public static void writeKiviatCSV(Double position, Double route, Double pheromone){
         try{
             File file = new File(System.getProperty("user.dir") + "/logs/kiviat.csv");

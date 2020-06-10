@@ -11,13 +11,17 @@ import java.util.TreeSet;
 
 public class Main {
 
-    private static void firstSheet() {
+    /**
+     * approach, which searches a solution for the traveling salesman
+     * by trying all possible routes
+     */
+    private static void exhaustive() {
         int numberOfCities = 10;
         long seed;
         long [] elapsedTimes = new long[10];
         long elapsedSum = 0;
         for(seed=1; seed<=10; seed++) {
-//            exhaustive.ExhaustiveSearch.shortestDistance = Integer.MAX_VALUE;
+            // initial settings
             Matrix matrix = new Matrix(numberOfCities);
             ExhaustiveSearch search = new ExhaustiveSearch(matrix);
             search.matrixInit(seed);
@@ -26,10 +30,12 @@ public class Main {
             for (int i = 0; i < numberOfCities; i++) {
                 unvisited.add(Integer.valueOf(i));
             }
+            // start computing the problem
             long startTime = System.nanoTime();
             search.calculateRoute(unvisited, new ArrayList<>(numberOfCities));
             elapsedTimes[(int)(seed-1)] = System.nanoTime() - startTime;
             elapsedSum += elapsedTimes[(int)(seed-1)];
+            // summarize results
             System.out.println("Shortest Distance: " + search.getShortestDistance());
             System.out.println("Shortest Route: " + search.getShortestRoute());
             System.out.println();
@@ -38,7 +44,7 @@ public class Main {
     }
 
     public static void main(String[] args) {
-//        firstSheet();
+//        exhaustive();
         if (args.length != 9) {
             System.out.println("error: Invalid Arguments");
             return;
@@ -60,28 +66,40 @@ public class Main {
         double tau = Double.parseDouble(args[8]);
 
         int experimentsNum = 10;
+        // list for the best distance of each experiment and their corresponding tour
         List<Integer> distanceResult = new ArrayList(experimentsNum);
         List<List> tourResult = new ArrayList<List>(experimentsNum);
+        // four matrices, each comprise a column for each experiment
+        // and a row for each measured emergence value (time step)
+        // these are needed for computing mean values
         List<List<Tuple>> distanceList = new ArrayList<>(experimentsNum);
         List<List<Tuple>> posEmergList = new ArrayList<>(experimentsNum);
         List<List<Tuple>> routEmergList = new ArrayList<>(experimentsNum);
         List<List<Tuple>> pheroEmergList = new ArrayList<>(experimentsNum);
+        // average values for each time step
         List<Double> positionAverage = new ArrayList<>();
         List<Double> routeAverage = new ArrayList<>();
         List<Double> pheromoneAverage = new ArrayList<>();
+        // variables for performance measures
         long[] elapsedTime = new long[10];
         long elapsedSum = 0;
         long acsSeed;
         long startTime;
+        // create and initiate a single matrix as representation of the distances between all cities
         Matrix.initSeed(seed);
         Matrix<Integer> distanceMatrix = new Matrix<>(numberCities);
         distanceMatrix.matrixInit();
         distanceMatrix.printMatrix();
+        // each experiment is executed with different seeds
         for (acsSeed=1; acsSeed<=experimentsNum; acsSeed++) {
+            // create a new pheromone matrix
             Matrix<Double> pheromoneMatrix = new Matrix<>(numberCities);
+            // start measuring time
             startTime = System.nanoTime();
             AntColony acs = new AntColony(distanceMatrix, pheromoneMatrix, numberAnts, iterations, q, beta, alpha, rho, tau, acsSeed);
+            // start computing traveling salesman problem
             acs.antColonySystem();
+            //end measuring time
             elapsedTime[(int)(acsSeed-1)] = System.nanoTime() - startTime;
             elapsedSum += elapsedTime[(int)(acsSeed-1)];
             // retrieve and store shortest distance of all iterations
@@ -97,20 +115,25 @@ public class Main {
 //            System.out.println("Best Iterations tour: " + acs.getBestIterationTour());
 //            System.out.println();
         }
+        // a tree set simplifies the calculation of the expected value
         TreeSet<Integer> resultSet = new TreeSet<>(distanceResult);
         Double expectedValue = AntColony.expectedValue(distanceResult,resultSet,10);
         int index = distanceResult.indexOf(resultSet.first());
+        // print the results of the experiments
         System.out.println("Average elapsed time in sec: " + elapsedSum/(1e9*10));
-        System.out.println("Shortest Distance for all seeds: " + resultSet.first());
-        System.out.println("Expected Value for all seeds: " + expectedValue);
-        System.out.println("Shortest Tour for all seeds: " + tourResult.get(index));
+        System.out.println("Shortest Distance: " + resultSet.first());
+        System.out.println("Expected Value: " + expectedValue);
+        System.out.println("Shortest Tour: " + tourResult.get(index));
+        // computing average for all experiments
         AntColony.averageValue(distanceList, "distance");
         positionAverage.addAll(AntColony.averageValue(posEmergList, "position"));
         routeAverage.addAll(AntColony.averageValue(routEmergList, "route"));
         pheromoneAverage.addAll(AntColony.averageValue(pheroEmergList, "pheromone"));
+        // compute the absolute difference of entropy between first and last iteration
         Double positionAbsolute = Math.abs(positionAverage.get(positionAverage.size()-1)-positionAverage.get(1));
         Double routeAbsolute = Math.abs(routeAverage.get(routeAverage.size()-1)-routeAverage.get(1));
         Double pheromoneAbsolute = Math.abs(pheromoneAverage.get(pheromoneAverage.size()-1)-pheromoneAverage.get(1));
+        // write absolute values to log file
         AntColony.writeKiviatCSV(positionAbsolute,routeAbsolute,pheromoneAbsolute);
         return;
 
